@@ -1,5 +1,3 @@
-use std::str::{Chars, Split};
-use std::iter::{FilterMap, Map, Skip};
 
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -9,6 +7,18 @@ pub enum DNABase {
     G,
     T
 }
+
+type DNASequence = Vec<DNABase>;
+pub struct Read {
+    id: String,
+    desc: String,
+    seq: DNASequence
+}
+
+pub struct Fasta {
+    reads: Vec<Read>
+}
+
 
 
 fn char_to_dna_base(c: char) -> Option<DNABase> {
@@ -22,42 +32,32 @@ fn char_to_dna_base(c: char) -> Option<DNABase> {
     }
 }
 
-pub type VirtualSequence<'a> = FilterMap<Chars<'a>, fn(char) -> Option<DNABase>>;
-pub struct VirtualRead<'a> {
-    id: &'a str,
-    desc: & 'a str,
-    seq: VirtualSequence<'a>
+pub fn str_to_seq(input: &str) -> DNASequence {
+    input.chars().map(char_to_dna_base).collect()
 }
 
-pub fn str_to_virtual_seq<'a>(input: &'a str) -> VirtualSequence<'a> {
-    input.chars().filter_map(char_to_dna_base)
-}
+pub fn str_to_read(input: str) -> Read{
+    let (a, b) =  input.split_once(">").unwrap();
+    if a == "" {
+        input = b;
+    }
 
-pub fn str_to_virtual_read<'a>(input: &'a str) -> VirtualRead<'a> {
     let (header, data) = input.split_once("\n").unwrap();
     let (id, desc) = header.split_once(" ").unwrap();
-    VirtualRead {
-        id: id,
-        desc: desc,
-        seq: str_to_virtual_seq(data)
+    Read {
+        id: id.to_string(),
+        desc: desc.to_string(),
+        seq: str_to_seq(data)
     }
 }
 
-
-pub type VirtualFasta<'a> = Map<Skip<Split<'a, &'a str>>, fn(&'a str) -> VirtualRead<'a>>;
-pub fn str_to_virtual_fasta<'a>(input: &'a str) -> VirtualFasta<'a> {
-    input.split(">").skip(1).map(str_to_virtual_read)
-}
-
-
-
-
 pub fn main(fasta: &str) {
-    let c = str_to_virtual_fasta(fasta).count();
+    let c = str_to_fasta(fasta).len();
     println!("Number of records: {c}");
 
     let (longest_read, read_len) = str_to_virtual_fasta(fasta)
-        .map(|read| (read.id, read.seq.count()))
+        .iter()
+        .map(|read| (read.id, read.seq.len()))
         .reduce(|(max_id, max_len), (id, len)| {
             if len > max_len {
                 return (id, len)
@@ -65,4 +65,10 @@ pub fn main(fasta: &str) {
             return (max_id, max_len);
         }).unwrap();
     println!("Longest read: {longest_read}, with len {read_len}.");
+    
 }
+
+
+
+
+
