@@ -50,9 +50,43 @@ pub fn str_to_virtual_fasta<'a>(input: &'a str) -> VirtualFasta<'a> {
 }
 
 
+fn find_n_mers<'a>(seq: VirtualSequence<'a>, n: usize) -> Vec<Vec<usize>> {
+    
+    let mut base_seq = seq;
+    let mut compare_seq = seq.clone();
+
+    let mut n_mers_indices: Vec<Vec<usize>> = Vec::new();
+    for base_i in 0..(seq.len()-n+1) {
+        let base_slice = &seq[base_i..(base_i+n)];
+        let is_base_slice_checked = n_mers_indices.iter()
+                           .map(|repeats| repeats.get(0).unwrap())
+                           .map(|&start_i| &seq[start_i..(start_i+n)])
+                           .any(|compare_slice| base_slice == compare_slice);
+                           
+        if is_base_slice_checked {
+            continue;
+        }
+        
+        let mut base_repeats = Vec::new();
+        for compare_i in base_i..(seq.len()-n+1) {
+            if base_slice == &seq[compare_i..(compare_i+n)] {
+                base_repeats.push(compare_i);
+            }
+        }
+         
+        if base_repeats.len() > 1 {
+            n_mers_indices.push(base_repeats)
+        }
+    }  
+    return n_mers_indices 
+}
+
+
+
 pub fn main(fasta: &str) {
     let c = str_to_virtual_fasta(fasta).count();
     println!("Number of records: {c}");
+
     let (longest_read, read_len) = str_to_virtual_fasta(fasta)
         .map(|read| (read.id, read.seq.count()))
         .reduce(|(max_id, max_len), (id, len)| {
@@ -63,4 +97,6 @@ pub fn main(fasta: &str) {
         }).unwrap();
     println!("Longest read: {longest_read}, with len {read_len}.");
     
+    str_to_virtual_fasta(fasta)
+        .map(|read| )
 }
